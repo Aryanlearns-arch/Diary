@@ -3,113 +3,128 @@
 <head>
 <meta charset="UTF-8">
 <title>Private Diary</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-body{margin:0;font-family:system-ui;background:#0b0d14;color:white}
-.screen{max-width:460px;margin:auto;padding:28px;min-height:100vh}
+:root{--bg:#0b0d14;--card:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.08);--accent:#8ba4ff;--text:#fff;--muted:#a0a5b5}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;background:radial-gradient(circle at top,#151829,#0b0d14);color:var(--text)}
+.screen{max-width:460px;margin:auto;padding:28px 22px;min-height:100vh}
 #app{display:none}
-input,textarea,button{width:100%;padding:14px;margin-top:12px;border-radius:12px;border:none}
-button{background:#6f85ff;color:white;font-weight:600}
-.post{background:#111;border-radius:12px;padding:12px;margin-top:10px}
+h1{font-size:30px;font-weight:700;margin:42px 0 8px;letter-spacing:-.02em}
+p{color:var(--muted);line-height:1.6;font-size:15px}
+.card{background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));border:1px solid var(--border);border-radius:22px;padding:22px 20px;margin-top:22px;backdrop-filter:blur(16px);box-shadow:0 10px 30px rgba(0,0,0,.25)}
+input,textarea{width:100%;padding:14px 16px;border-radius:14px;border:1px solid rgba(255,255,255,0.05);background:rgba(255,255,255,0.03);color:white;font-size:16px;margin-top:14px;outline:none}
+textarea{resize:none;min-height:120px}
+button{width:100%;padding:14px;border-radius:14px;border:none;font-size:15px;margin-top:16px;background:linear-gradient(135deg,#8ba4ff,#6f85ff);color:white;font-weight:600;cursor:pointer}
+button.secondary{background:rgba(255,255,255,0.06);color:var(--muted)}
+.post{background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:18px;padding:14px 16px;margin-top:14px}
+.post time{display:block;font-size:12px;color:var(--muted);margin-top:6px}
 </style>
 </head>
 
 <body>
 
 <div id="login" class="screen">
-  <h1>Login</h1>
-  <input id="email" type="email" placeholder="Email">
-  <button onclick="sendLink()">Send magic link</button>
+  <h1>Welcome</h1>
+  <p>Your private space. Only you can see what you write.</p>
+  <div class="card">
+    <input id="email" type="email" placeholder="Email address">
+    <button onclick="sendLink()">Send magic link</button>
+  </div>
 </div>
 
 <div id="app" class="screen">
   <h1>My Diary</h1>
-  <textarea id="entry"></textarea>
-  <button onclick="addEntry()">Save</button>
+  <div class="card">
+    <textarea id="entry" placeholder="Write something..."></textarea>
+    <button onclick="addEntry()">Save</button>
+  </div>
   <div id="feed"></div>
-  <button onclick="logout()">Logout</button>
+  <button class="secondary" onclick="logout()" style="margin-top:22px">Log out</button>
 </div>
 
 <script>
-function log(e){ console.error(e); alert("Error: " + e.message); }
+function log(e){console.error(e);alert("Error: "+e.message)}
 
-window.onload = async () => {
-  if (!window.supabase) {
-    alert("Supabase failed to load. Check internet or script tag.");
-    return;
-  }
+const SUPABASE_URL="https://fzgmpdybtnjzqikxfaco.supabase.co";
+const SUPABASE_KEY="sb_publishable_-uOtGJkoTs43mx32klszYQ_pOAdTkEJ";
 
-  const client = supabase.createClient(
-    "https://fzgmpdybtnjzqikxfaco.supabase.co",
-    "sb_publishable_-uOtGJkoTs43mx32klszYQ_pOAdTkEJ"
-  );
+let client,login,app;
 
-  window.client = client;
+window.addEventListener("load",async()=>{
+  if(!window.supabase){alert("Supabase failed to load");return}
+  client=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+  login=document.getElementById("login");
+  app=document.getElementById("app");
 
-  const login = document.getElementById("login");
-  const app = document.getElementById("app");
+  login.style.display="block";
+  app.style.display="none";
 
-  async function showApp() {
-    login.style.display = "none";
-    app.style.display = "block";
-    loadEntries();
-  }
+  const {data}=await client.auth.getSession();
+  if(data.session) showApp();
 
-  async function loadEntries() {
-    const { data, error } = await client.from("diary").select("*").order("created_at",{ascending:false});
-    if(error) return log(error);
-
-    document.getElementById("feed").innerHTML = data.map(d=>`
-      <div class="post">${d.content}</div>
-    `).join("");
-  }
-
-  window.sendLink = async () => {
-    const email = document.getElementById("email").value.trim();
-    if(!email) return alert("Enter email");
-
-    const { error } = await client.auth.signInWithOtp({
-      email,
-      options:{ emailRedirectTo:"https://diary-w3k8.onrender.com" }
-    });
-
-    if(error) log(error);
-    else alert("Check your email.");
-  };
-
-  window.addEntry = async () => {
-    const text = document.getElementById("entry").value.trim();
-    if(!text) return;
-
-    const { data:userData, error:userError } = await client.auth.getUser();
-    if(userError || !userData?.user) return alert("Not logged in");
-
-    const { error } = await client.from("diary").insert({
-      content:text,
-      user_id:userData.user.id
-    });
-
-    if(error) return log(error);
-
-    document.getElementById("entry").value="";
-    loadEntries();
-  };
-
-  window.logout = async () => {
-    await client.auth.signOut();
-    app.style.display="none";
-    login.style.display="block";
-  };
-
-  client.auth.onAuthStateChange((_,session)=>{
+  client.auth.onAuthStateChange((event,session)=>{
+    console.log("Auth:",event);
     if(session) showApp();
   });
+});
 
-  const { data } = await client.auth.getSession();
-  if(data.session) showApp();
-};
+function showApp(){
+  login.style.display="none";
+  app.style.display="block";
+  loadEntries();
+}
+
+async function sendLink(){
+  const email=document.getElementById("email").value.trim();
+  if(!email) return alert("Enter your email");
+
+  const {error}=await client.auth.signInWithOtp({
+    email,
+    options:{emailRedirectTo:"https://diary-w3k8.onrender.com"}
+  });
+
+  if(error) log(error);
+  else alert("Check your email for the login link.");
+}
+
+async function loadEntries(){
+  const {data,error}=await client.from("diary").select("*").order("created_at",{ascending:false});
+  if(error) return log(error);
+
+  document.getElementById("feed").innerHTML=data.map(d=>`
+    <div class="post">
+      <div>${d.content}</div>
+      <time>${new Date(d.created_at).toLocaleString()}</time>
+    </div>
+  `).join("");
+}
+
+async function addEntry(){
+  const text=document.getElementById("entry").value.trim();
+  if(!text) return;
+
+  const {data:userData,error:userError}=await client.auth.getUser();
+  if(userError||!userData?.user) return alert("Please login again.");
+
+  const {error}=await client.from("diary").insert({
+    content:text,
+    user_id:userData.user.id
+  });
+
+  if(error) return log(error);
+
+  document.getElementById("entry").value="";
+  loadEntries();
+}
+
+async function logout(){
+  await client.auth.signOut();
+  login.style.display="block";
+  app.style.display="none";
+}
 </script>
 
 </body>
