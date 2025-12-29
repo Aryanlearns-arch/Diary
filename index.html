@@ -8,105 +8,123 @@
 
 <style>
 :root {
-  --bg: #0e0f14;
-  --card: rgba(255,255,255,0.04);
-  --border: rgba(255,255,255,0.08);
-  --accent: #7c9cff;
-  --text: #ffffff;
-  --muted: #9fa3b0;
+  --bg:#0b0d14;
+  --card:rgba(255,255,255,0.035);
+  --border:rgba(255,255,255,0.08);
+  --accent:#8ba4ff;
+  --text:#fff;
+  --muted:#a0a5b5;
 }
 
-* { box-sizing: border-box; }
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  background: radial-gradient(circle at top, #1a1b25, #0e0f14);
-  color: var(--text);
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  background:radial-gradient(circle at top,#151829,#0b0d14);
+  color:var(--text);
 }
 
-.screen {
-  max-width: 480px;
-  margin: auto;
-  padding: 24px;
-  display: none;
-  min-height: 100vh;
+.screen{
+  max-width:460px;
+  margin:auto;
+  padding:28px 22px;
+  display:none;
+  min-height:100vh;
 }
 
-h1 {
-  font-size: 28px;
-  font-weight: 700;
-  margin-top: 40px;
+h1{
+  font-size:30px;
+  font-weight:700;
+  margin:42px 0 8px;
+  letter-spacing:-0.02em;
 }
 
-p {
-  color: var(--muted);
-  line-height: 1.5;
+p{
+  color:var(--muted);
+  line-height:1.6;
+  font-size:15px;
 }
 
-.card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 22px;
-  padding: 20px;
-  margin-top: 20px;
-  backdrop-filter: blur(14px);
+.card{
+  background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));
+  border:1px solid var(--border);
+  border-radius:22px;
+  padding:22px 20px;
+  margin-top:22px;
+  backdrop-filter:blur(16px);
+  box-shadow:0 10px 30px rgba(0,0,0,.25);
 }
 
-input, textarea, button {
-  width: 100%;
-  padding: 14px 16px;
-  border-radius: 14px;
-  border: none;
-  font-size: 16px;
-  margin-top: 12px;
+input,textarea{
+  width:100%;
+  padding:14px 16px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.05);
+  background:rgba(255,255,255,0.03);
+  color:white;
+  font-size:16px;
+  margin-top:14px;
+  outline:none;
+  transition:border .2s,background .2s;
 }
 
-input, textarea {
-  background: rgba(255,255,255,0.05);
-  color: white;
+input:focus,textarea:focus{
+  border-color:var(--accent);
+  background:rgba(255,255,255,0.05);
 }
 
-button {
-  background: linear-gradient(135deg, #7c9cff, #5f7cff);
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
+textarea{resize:none;min-height:120px}
+
+button{
+  width:100%;
+  padding:14px;
+  border-radius:14px;
+  border:none;
+  font-size:15px;
+  margin-top:16px;
+  background:linear-gradient(135deg,#8ba4ff,#6f85ff);
+  color:white;
+  font-weight:600;
+  cursor:pointer;
+  transition:transform .1s,box-shadow .1s;
 }
 
-button.secondary {
-  background: rgba(255,255,255,0.06);
-  color: var(--muted);
+button:active{transform:scale(.98)}
+
+button.secondary{
+  background:rgba(255,255,255,0.06);
+  color:var(--muted);
 }
 
-.post {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 14px 16px;
-  margin-top: 12px;
-  animation: fade 0.3s ease;
+.post{
+  background:rgba(255,255,255,0.025);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:14px 16px;
+  margin-top:14px;
+  animation:fade .25s ease;
 }
 
-.post time {
-  display: block;
-  font-size: 12px;
-  color: var(--muted);
-  margin-top: 6px;
+.post time{
+  display:block;
+  font-size:12px;
+  color:var(--muted);
+  margin-top:6px;
 }
 
-@keyframes fade {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes fade{
+  from{opacity:0;transform:translateY(6px)}
+  to{opacity:1;transform:translateY(0)}
 }
 </style>
 </head>
+
 <body>
 
 <div id="login" class="screen">
   <h1>Welcome</h1>
   <p>Your private space. Only you can see what you write.</p>
-
   <div class="card">
     <input id="email" type="email" placeholder="Email address">
     <button onclick="sendLink()">Send magic link</button>
@@ -115,15 +133,12 @@ button.secondary {
 
 <div id="app" class="screen">
   <h1>My Diary</h1>
-
   <div class="card">
     <textarea id="entry" placeholder="Write something..."></textarea>
     <button onclick="addEntry()">Save</button>
   </div>
-
   <div id="feed"></div>
-
-  <button class="secondary" onclick="logout()" style="margin-top:20px;">Log out</button>
+  <button class="secondary" onclick="logout()" style="margin-top:22px">Log out</button>
 </div>
 
 <script>
@@ -137,36 +152,34 @@ const client = createClient(
 const login = document.getElementById("login");
 const app = document.getElementById("app");
 
-async function sendLink() {
-  const email = document.getElementById("email").value.trim();
-  if (!email) return alert("Enter your email");
+async function sendLink(){
+  const email=document.getElementById("email").value.trim();
+  if(!email) return alert("Enter your email");
 
   const { error } = await client.auth.signInWithOtp({
     email,
-    options: {
-      emailRedirectTo: "https://diary-w3k8.onrender.com"
-    }
+    options:{ emailRedirectTo:"https://diary-w3k8.onrender.com" }
   });
 
-  if (error) alert(error.message);
+  if(error) alert(error.message);
   else alert("Magic link sent. Check your email.");
 }
 
-async function showApp() {
-  login.style.display = "none";
-  app.style.display = "block";
+async function showApp(){
+  login.style.display="none";
+  app.style.display="block";
   loadEntries();
 }
 
-async function loadEntries() {
+async function loadEntries(){
   const { data, error } = await client
     .from("diary")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("created_at",{ascending:false});
 
-  if (error) return alert(error.message);
+  if(error) return alert(error.message);
 
-  document.getElementById("feed").innerHTML = data.map(d => `
+  document.getElementById("feed").innerHTML = data.map(d=>`
     <div class="post">
       <div>${d.content}</div>
       <time>${new Date(d.created_at).toLocaleString()}</time>
@@ -174,31 +187,37 @@ async function loadEntries() {
   `).join("");
 }
 
-async function addEntry() {
-  const text = document.getElementById("entry").value.trim();
-  if (!text) return;
+async function addEntry(){
+  const text=document.getElementById("entry").value.trim();
+  if(!text) return;
 
-  const { error } = await client.from("diary").insert({ content: text });
-  if (error) alert(error.message);
+  const { data:userData } = await client.auth.getUser();
+  const { error } = await client.from("diary").insert({
+    content:text,
+    user_id:userData.user.id
+  });
 
-  document.getElementById("entry").value = "";
+  if(error) return alert(error.message);
+
+  document.getElementById("entry").value="";
   loadEntries();
 }
 
-async function logout() {
+async function logout(){
   await client.auth.signOut();
-  app.style.display = "none";
-  login.style.display = "block";
+  app.style.display="none";
+  login.style.display="block";
 }
 
-client.auth.onAuthStateChange((event, session) => {
-  if (session) showApp();
+client.auth.onAuthStateChange((_,session)=>{
+  if(session) showApp();
 });
 
-client.auth.getSession().then(({ data }) => {
-  if (data.session) showApp();
-  else login.style.display = "block";
+client.auth.getSession().then(({data})=>{
+  if(data.session) showApp();
+  else login.style.display="block";
 });
 </script>
+
 </body>
 </html>
