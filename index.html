@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -79,16 +78,13 @@
 <!-- LOGIN SCREEN -->
 <div id="login" class="screen">
   <h2>Sign in</h2>
-  <p>
-    Enter your email.  
-    We’ll send you a verification link to log in.
-  </p>
+  <p>Enter your email. We’ll send you a verification link.</p>
 
   <input id="email" type="email" placeholder="Email address">
   <button onclick="sendLink()">Send verification link</button>
 
   <div class="hint">
-    After clicking the link in your email, return to this page.
+    After clicking the link in your email, you’ll be logged in automatically.
   </div>
 </div>
 
@@ -122,7 +118,7 @@ async function sendLink() {
   const { error } = await client.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: window.location.href
+      emailRedirectTo: "https://diary-w3k8.onrender.com"
     }
   });
 
@@ -166,7 +162,11 @@ async function logout() {
   loginScreen.style.display = "block";
 }
 
-// Auto-login if user clicked magic link
+// Auto-login after magic link redirect
+client.auth.onAuthStateChange((event, session) => {
+  if (session) showApp();
+});
+
 client.auth.getSession().then(({ data }) => {
   if (data.session) showApp();
   else loginScreen.style.display = "block";
