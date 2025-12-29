@@ -1,115 +1,204 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Private Diary</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    body {
-      font-family: system-ui, sans-serif;
-      background: #0f172a;
-      color: #e5e7eb;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
+<meta charset="UTF-8">
+<title>Private Diary</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    .app {
-      background: #020617;
-      padding: 24px;
-      border-radius: 12px;
-      width: 100%;
-      max-width: 420px;
-      box-shadow: 0 0 40px rgba(0,0,0,.4);
-    }
+<style>
+:root {
+  --bg: #0e0f14;
+  --card: rgba(255,255,255,0.04);
+  --border: rgba(255,255,255,0.08);
+  --accent: #7c9cff;
+  --text: #ffffff;
+  --muted: #9fa3b0;
+}
 
-    input, textarea, button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 8px;
-      border: none;
-      font-size: 14px;
-    }
+* { box-sizing: border-box; }
 
-    textarea {
-      resize: vertical;
-      min-height: 100px;
-    }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: radial-gradient(circle at top, #1a1b25, #0e0f14);
+  color: var(--text);
+}
 
-    button {
-      background: #6366f1;
-      color: white;
-      cursor: pointer;
-    }
+.screen {
+  max-width: 480px;
+  margin: auto;
+  padding: 24px;
+  display: none;
+  min-height: 100vh;
+}
 
-    .hidden { display: none; }
-  </style>
+h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-top: 40px;
+}
+
+p {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 20px;
+  margin-top: 20px;
+  backdrop-filter: blur(14px);
+}
+
+input, textarea, button {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: none;
+  font-size: 16px;
+  margin-top: 12px;
+}
+
+input, textarea {
+  background: rgba(255,255,255,0.05);
+  color: white;
+}
+
+button {
+  background: linear-gradient(135deg, #7c9cff, #5f7cff);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: rgba(255,255,255,0.06);
+  color: var(--muted);
+}
+
+.post {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 14px 16px;
+  margin-top: 12px;
+  animation: fade 0.3s ease;
+}
+
+.post time {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+@keyframes fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
 </head>
 <body>
-  <div class="app">
-    <h2>Private Diary</h2>
 
-    <div id="auth">
-      <input id="email" type="email" placeholder="Enter your email" />
-      <button id="loginBtn">Send magic link</button>
-    </div>
+<div id="login" class="screen">
+  <h1>Welcome</h1>
+  <p>Your private space. Only you can see what you write.</p>
 
-    <div id="diary" class="hidden">
-      <textarea id="entry" placeholder="Write your thoughts..."></textarea>
-      <button id="postBtn">Post</button>
-      <p id="status"></p>
-    </div>
+  <div class="card">
+    <input id="email" type="email" placeholder="Email address">
+    <button onclick="sendLink()">Send magic link</button>
+  </div>
+</div>
+
+<div id="app" class="screen">
+  <h1>My Diary</h1>
+
+  <div class="card">
+    <textarea id="entry" placeholder="Write something..."></textarea>
+    <button onclick="addEntry()">Save</button>
   </div>
 
-  <script>
-    const SUPABASE_URL = "https://YOUR_PROJECT_ID.supabase.co";
-    const SUPABASE_KEY = "YOUR_PUBLIC_ANON_KEY";
+  <div id="feed"></div>
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  <button class="secondary" onclick="logout()" style="margin-top:20px;">Log out</button>
+</div>
 
-    const authDiv = document.getElementById("auth");
-    const diaryDiv = document.getElementById("diary");
-    const status = document.getElementById("status");
+<script>
+const { createClient } = supabase;
 
-    document.getElementById("loginBtn").addEventListener("click", async () => {
-      const email = document.getElementById("email").value;
-      await supabase.auth.signInWithOtp({ email });
-      alert("Check your email for the login link.");
-    });
+const client = createClient(
+  "https://fzgmpdybtnjzqikxfaco.supabase.co",
+  "sb_publishable_-uOtGJkoTs43mx32klszYQ_pOAdTkEJ"
+);
 
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        authDiv.classList.add("hidden");
-        diaryDiv.classList.remove("hidden");
-      }
-    });
+const login = document.getElementById("login");
+const app = document.getElementById("app");
 
-    document.getElementById("postBtn").addEventListener("click", async () => {
-      const text = document.getElementById("entry").value.trim();
-      if (!text) return;
+async function sendLink() {
+  const email = document.getElementById("email").value.trim();
+  if (!email) return alert("Enter your email");
 
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError) {
-        alert(userError.message);
-        return;
-      }
+  const { error } = await client.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: "https://diary-w3k8.onrender.com"
+    }
+  });
 
-      const { error } = await supabase.from("diary").insert([
-        {
-          content: text,
-          user_id: userData.user.id
-        }
-      ]);
+  if (error) alert(error.message);
+  else alert("Magic link sent. Check your email.");
+}
 
-      if (error) {
-        alert(error.message);
-      } else {
-        document.getElementById("entry").value = "";
-        status.textContent = "Saved.";
-      }
-    });
-  </script>
+async function showApp() {
+  login.style.display = "none";
+  app.style.display = "block";
+  loadEntries();
+}
+
+async function loadEntries() {
+  const { data, error } = await client
+    .from("diary")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) return alert(error.message);
+
+  document.getElementById("feed").innerHTML = data.map(d => `
+    <div class="post">
+      <div>${d.content}</div>
+      <time>${new Date(d.created_at).toLocaleString()}</time>
+    </div>
+  `).join("");
+}
+
+async function addEntry() {
+  const text = document.getElementById("entry").value.trim();
+  if (!text) return;
+
+  const { error } = await client.from("diary").insert({ content: text });
+  if (error) alert(error.message);
+
+  document.getElementById("entry").value = "";
+  loadEntries();
+}
+
+async function logout() {
+  await client.auth.signOut();
+  app.style.display = "none";
+  login.style.display = "block";
+}
+
+client.auth.onAuthStateChange((event, session) => {
+  if (session) showApp();
+});
+
+client.auth.getSession().then(({ data }) => {
+  if (data.session) showApp();
+  else login.style.display = "block";
+});
+</script>
 </body>
 </html>
