@@ -1,0 +1,177 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Diary</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: #000;
+      color: #fff;
+    }
+
+    .screen {
+      max-width: 420px;
+      margin: auto;
+      padding: 24px;
+      display: none;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+
+    h2 {
+      margin-top: 40px;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    p {
+      color: #aaa;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    input, textarea, button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 14px;
+      border-radius: 14px;
+      border: none;
+      font-size: 16px;
+    }
+
+    input, textarea {
+      background: #111;
+      color: #fff;
+    }
+
+    button {
+      background: #1d9bf0;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .hint {
+      margin-top: 16px;
+      font-size: 13px;
+      color: #777;
+    }
+
+    .post {
+      border-bottom: 1px solid #222;
+      padding: 12px 0;
+    }
+
+    .logout {
+      background: #333;
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login" class="screen">
+  <h2>Sign in</h2>
+  <p>
+    Enter your email.  
+    We’ll send you a verification link to log in.
+  </p>
+
+  <input id="email" type="email" placeholder="Email address">
+  <button onclick="sendLink()">Send verification link</button>
+
+  <div class="hint">
+    After clicking the link in your email, return to this page.
+  </div>
+</div>
+
+<!-- APP SCREEN -->
+<div id="app" class="screen">
+  <h2>My Diary</h2>
+
+  <textarea id="entry" placeholder="Write something…"></textarea>
+  <button onclick="addEntry()">Post</button>
+
+  <div id="feed"></div>
+
+  <button class="logout" onclick="logout()">Log out</button>
+</div>
+
+<script>
+const { createClient } = supabase;
+
+const client = createClient(
+  "https://fzgmpdybtnjzqikxfaco.supabase.co",
+  "sb_publishable_-uOtGJkoTs43mx32klszYQ_pOAdTkEJ"
+);
+
+const loginScreen = document.getElementById("login");
+const appScreen = document.getElementById("app");
+
+async function sendLink() {
+  const email = document.getElementById("email").value.trim();
+  if (!email) return alert("Enter your email");
+
+  const { error } = await client.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: window.location.href
+    }
+  });
+
+  if (error) alert(error.message);
+  else alert("Verification link sent. Check your email.");
+}
+
+async function showApp() {
+  loginScreen.style.display = "none";
+  appScreen.style.display = "block";
+  loadEntries();
+}
+
+async function loadEntries() {
+  const { data, error } = await client
+    .from("diary")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) return alert(error.message);
+
+  document.getElementById("feed").innerHTML = data.map(d =>
+    `<div class="post">${d.content}</div>`
+  ).join("");
+}
+
+async function addEntry() {
+  const text = document.getElementById("entry").value.trim();
+  if (!text) return;
+
+  const { error } = await client.from("diary").insert({ content: text });
+  if (error) alert(error.message);
+
+  document.getElementById("entry").value = "";
+  loadEntries();
+}
+
+async function logout() {
+  await client.auth.signOut();
+  appScreen.style.display = "none";
+  loginScreen.style.display = "block";
+}
+
+// Auto-login if user clicked magic link
+client.auth.getSession().then(({ data }) => {
+  if (data.session) showApp();
+  else loginScreen.style.display = "block";
+});
+</script>
+
+</body>
+</html>
