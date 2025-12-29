@@ -2,176 +2,101 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>My Diary</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <title>Private Diary</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Supabase CDN -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
   <style>
     body {
-      margin: 0;
       font-family: system-ui, sans-serif;
-      background: #000;
-      color: #fff;
-    }
-
-    .screen {
-      max-width: 420px;
-      margin: auto;
-      padding: 24px;
-      display: none;
+      background: #0f172a;
+      color: #e5e7eb;
+      display: flex;
+      justify-content: center;
+      align-items: center;
       min-height: 100vh;
-      box-sizing: border-box;
     }
-
-    h2 {
-      margin-top: 40px;
-      margin-bottom: 12px;
-      font-weight: 600;
+    .app {
+      background: #020617;
+      padding: 20px;
+      border-radius: 10px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
     }
-
-    p {
-      color: #aaa;
-      font-size: 14px;
-      line-height: 1.4;
-    }
-
     input, textarea, button {
       width: 100%;
-      padding: 14px;
-      margin-top: 14px;
-      border-radius: 14px;
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 6px;
       border: none;
-      font-size: 16px;
+      font-size: 14px;
     }
-
-    input, textarea {
-      background: #111;
-      color: #fff;
-    }
-
     button {
-      background: #1d9bf0;
-      color: #fff;
-      font-weight: 600;
+      background: #2563eb;
+      color: white;
       cursor: pointer;
     }
-
-    .hint {
-      margin-top: 16px;
+    #entries {
+      margin-top: 15px;
       font-size: 13px;
-      color: #777;
-    }
-
-    .post {
-      border-bottom: 1px solid #222;
-      padding: 12px 0;
-    }
-
-    .logout {
-      background: #333;
-      margin-top: 24px;
+      opacity: 0.8;
     }
   </style>
 </head>
 <body>
+  <div class="app">
+    <h2>Private Diary</h2>
 
-<!-- LOGIN SCREEN -->
-<div id="login" class="screen">
-  <h2>Sign in</h2>
-  <p>Enter your email. We’ll send you a verification link.</p>
+    <input id="email" type="email" placeholder="Email" />
+    <button id="loginBtn">Login</button>
 
-  <input id="email" type="email" placeholder="Email address">
-  <button onclick="sendLink()">Send verification link</button>
+    <textarea id="entry" placeholder="Write something..." rows="4"></textarea>
+    <button id="postBtn">Post</button>
 
-  <div class="hint">
-    After clicking the link in your email, you’ll be logged in automatically.
+    <div id="entries"></div>
   </div>
-</div>
 
-<!-- APP SCREEN -->
-<div id="app" class="screen">
-  <h2>My Diary</h2>
+  <script>
+    const SUPABASE_URL = "https://YOUR_PROJECT_ID.supabase.co";
+    const SUPABASE_KEY = "YOUR_PUBLIC_ANON_KEY";
 
-  <textarea id="entry" placeholder="Write something…"></textarea>
-  <button onclick="addEntry()">Post</button>
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  <div id="feed"></div>
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const email = document.getElementById("email").value;
+      if (!email) return alert("Enter email");
 
-  <button class="logout" onclick="logout()">Log out</button>
-</div>
+      const { error } = await supabase.auth.signInWithOtp({ email });
+      if (error) alert(error.message);
+      else alert("Magic link sent to email.");
+    });
 
-<script>
-const { createClient } = supabase;
+    document.getElementById("postBtn").addEventListener("click", async () => {
+      const text = document.getElementById("entry").value;
+      if (!text) return alert("Write something first.");
 
-const client = createClient(
-  "https://fzgmpdybtnjzqikxfaco.supabase.co",
-  "sb_publishable_-uOtGJkoTs43mx32klszYQ_pOAdTkEJ"
-);
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) {
+        alert("Not logged in");
+        return;
+      }
 
-const loginScreen = document.getElementById("login");
-const appScreen = document.getElementById("app");
+      const { error } = await supabase.from("diary").insert([
+        {
+          content: text,
+          user_id: userData.user.id
+        }
+      ]);
 
-async function sendLink() {
-  const email = document.getElementById("email").value.trim();
-  if (!email) return alert("Enter your email");
-
-  const { error } = await client.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: "https://diary-w3k8.onrender.com"
-    }
-  });
-
-  if (error) alert(error.message);
-  else alert("Verification link sent. Check your email.");
-}
-
-async function showApp() {
-  loginScreen.style.display = "none";
-  appScreen.style.display = "block";
-  loadEntries();
-}
-
-async function loadEntries() {
-  const { data, error } = await client
-    .from("diary")
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  if (error) return alert(error.message);
-
-  document.getElementById("feed").innerHTML = data.map(d =>
-    `<div class="post">${d.content}</div>`
-  ).join("");
-}
-
-async function addEntry() {
-  const text = document.getElementById("entry").value.trim();
-  if (!text) return;
-
-  const { error } = await client.from("diary").insert({ content: text });
-  if (error) alert(error.message);
-
-  document.getElementById("entry").value = "";
-  loadEntries();
-}
-
-async function logout() {
-  await client.auth.signOut();
-  appScreen.style.display = "none";
-  loginScreen.style.display = "block";
-}
-
-// Auto-login after magic link redirect
-client.auth.onAuthStateChange((event, session) => {
-  if (session) showApp();
-});
-
-client.auth.getSession().then(({ data }) => {
-  if (data.session) showApp();
-  else loginScreen.style.display = "block";
-});
-</script>
-
+      if (error) alert(error.message);
+      else {
+        document.getElementById("entry").value = "";
+        alert("Saved.");
+      }
+    });
+  </script>
 </body>
 </html>
