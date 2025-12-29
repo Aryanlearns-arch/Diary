@@ -3,11 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Private Diary</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Supabase CDN -->
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body {
       font-family: system-ui, sans-serif;
@@ -16,71 +12,87 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 100vh;
+      height: 100vh;
     }
+
     .app {
       background: #020617;
-      padding: 20px;
-      border-radius: 10px;
+      padding: 24px;
+      border-radius: 12px;
       width: 100%;
-      max-width: 400px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      max-width: 420px;
+      box-shadow: 0 0 40px rgba(0,0,0,.4);
     }
+
     input, textarea, button {
       width: 100%;
-      margin-top: 10px;
       padding: 10px;
-      border-radius: 6px;
+      margin-top: 10px;
+      border-radius: 8px;
       border: none;
       font-size: 14px;
     }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
     button {
-      background: #2563eb;
+      background: #6366f1;
       color: white;
       cursor: pointer;
     }
-    #entries {
-      margin-top: 15px;
-      font-size: 13px;
-      opacity: 0.8;
-    }
+
+    .hidden { display: none; }
   </style>
 </head>
 <body>
   <div class="app">
     <h2>Private Diary</h2>
 
-    <input id="email" type="email" placeholder="Email" />
-    <button id="loginBtn">Login</button>
+    <div id="auth">
+      <input id="email" type="email" placeholder="Enter your email" />
+      <button id="loginBtn">Send magic link</button>
+    </div>
 
-    <textarea id="entry" placeholder="Write something..." rows="4"></textarea>
-    <button id="postBtn">Post</button>
-
-    <div id="entries"></div>
+    <div id="diary" class="hidden">
+      <textarea id="entry" placeholder="Write your thoughts..."></textarea>
+      <button id="postBtn">Post</button>
+      <p id="status"></p>
+    </div>
   </div>
 
   <script>
     const SUPABASE_URL = "https://YOUR_PROJECT_ID.supabase.co";
     const SUPABASE_KEY = "YOUR_PUBLIC_ANON_KEY";
 
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const authDiv = document.getElementById("auth");
+    const diaryDiv = document.getElementById("diary");
+    const status = document.getElementById("status");
 
     document.getElementById("loginBtn").addEventListener("click", async () => {
       const email = document.getElementById("email").value;
-      if (!email) return alert("Enter email");
+      await supabase.auth.signInWithOtp({ email });
+      alert("Check your email for the login link.");
+    });
 
-      const { error } = await supabase.auth.signInWithOtp({ email });
-      if (error) alert(error.message);
-      else alert("Magic link sent to email.");
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        authDiv.classList.add("hidden");
+        diaryDiv.classList.remove("hidden");
+      }
     });
 
     document.getElementById("postBtn").addEventListener("click", async () => {
-      const text = document.getElementById("entry").value;
-      if (!text) return alert("Write something first.");
+      const text = document.getElementById("entry").value.trim();
+      if (!text) return;
 
       const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData.user) {
-        alert("Not logged in");
+      if (userError) {
+        alert(userError.message);
         return;
       }
 
@@ -91,10 +103,11 @@
         }
       ]);
 
-      if (error) alert(error.message);
-      else {
+      if (error) {
+        alert(error.message);
+      } else {
         document.getElementById("entry").value = "";
-        alert("Saved.");
+        status.textContent = "Saved.";
       }
     });
   </script>
