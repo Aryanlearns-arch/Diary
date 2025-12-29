@@ -7,24 +7,21 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-:root {
+:root{
   --bg:#0b0d14;
-  --card:rgba(255,255,255,0.035);
+  --card:rgba(255,255,255,0.04);
   --border:rgba(255,255,255,0.08);
   --accent:#8ba4ff;
   --text:#fff;
   --muted:#a0a5b5;
 }
-
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-
 body{
   margin:0;
   font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
   background:radial-gradient(circle at top,#151829,#0b0d14);
   color:var(--text);
 }
-
 .screen{
   max-width:460px;
   margin:auto;
@@ -32,20 +29,13 @@ body{
   display:none;
   min-height:100vh;
 }
-
 h1{
   font-size:30px;
   font-weight:700;
   margin:42px 0 8px;
   letter-spacing:-0.02em;
 }
-
-p{
-  color:var(--muted);
-  line-height:1.6;
-  font-size:15px;
-}
-
+p{color:var(--muted);line-height:1.6;font-size:15px}
 .card{
   background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));
   border:1px solid var(--border);
@@ -55,7 +45,6 @@ p{
   backdrop-filter:blur(16px);
   box-shadow:0 10px 30px rgba(0,0,0,.25);
 }
-
 input,textarea{
   width:100%;
   padding:14px 16px;
@@ -66,16 +55,8 @@ input,textarea{
   font-size:16px;
   margin-top:14px;
   outline:none;
-  transition:border .2s,background .2s;
 }
-
-input:focus,textarea:focus{
-  border-color:var(--accent);
-  background:rgba(255,255,255,0.05);
-}
-
 textarea{resize:none;min-height:120px}
-
 button{
   width:100%;
   padding:14px;
@@ -87,35 +68,20 @@ button{
   color:white;
   font-weight:600;
   cursor:pointer;
-  transition:transform .1s,box-shadow .1s;
 }
-
-button:active{transform:scale(.98)}
-
-button.secondary{
-  background:rgba(255,255,255,0.06);
-  color:var(--muted);
-}
-
+button.secondary{background:rgba(255,255,255,0.06);color:var(--muted)}
 .post{
   background:rgba(255,255,255,0.025);
   border:1px solid var(--border);
   border-radius:18px;
   padding:14px 16px;
   margin-top:14px;
-  animation:fade .25s ease;
 }
-
 .post time{
   display:block;
   font-size:12px;
   color:var(--muted);
   margin-top:6px;
-}
-
-@keyframes fade{
-  from{opacity:0;transform:translateY(6px)}
-  to{opacity:1;transform:translateY(0)}
 }
 </style>
 </head>
@@ -191,13 +157,15 @@ async function addEntry(){
   const text=document.getElementById("entry").value.trim();
   if(!text) return;
 
-  const { data:userData } = await client.auth.getUser();
+  const { data:userData, error:userError } = await client.auth.getUser();
+  if(userError || !userData?.user) return alert("Please login again.");
+
   const { error } = await client.from("diary").insert({
     content:text,
     user_id:userData.user.id
   });
 
-  if(error) return alert(error.message);
+  if(error) return alert("Save failed: "+error.message);
 
   document.getElementById("entry").value="";
   loadEntries();
