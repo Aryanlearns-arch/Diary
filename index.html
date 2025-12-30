@@ -18,6 +18,7 @@ body{
   max-width:520px;
   margin:auto;
   padding:24px 18px 32px;
+  position:relative;
 }
 
 header{
@@ -26,6 +27,17 @@ header{
   letter-spacing:-0.02em;
   margin-bottom:18px;
 }
+
+.logout{
+  position:absolute;
+  top:26px;
+  right:18px;
+  font-size:13px;
+  color:#a0a5b5;
+  cursor:pointer;
+}
+
+.logout:hover{ color:white }
 
 .editor{
   background:rgba(255,255,255,0.04);
@@ -97,6 +109,7 @@ button{
 <div id="login"></div>
 
 <div id="app">
+  <div class="logout" onclick="logout()">Log out</div>
   <header>My Diary</header>
 
   <div class="editor">
@@ -116,23 +129,30 @@ const SUPABASE_KEY="sb_publishable_-uOtGJkoTs43mx32klszYQ_pOAdTkEJ";
 const client=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 async function loadEntries(){
-  const {data}=await client.from("diary").select("*").order("created_at",{ascending:false});
-  document.getElementById("feed").innerHTML=data.map(d=>`
-    <div class="entry">
-      <div>${d.content}</div>
-      <time>${new Date(d.created_at).toLocaleString()}</time>
-    </div>
-  `).join("");
+  const { data } = await client
+    .from("diary")
+    .select("content, created_at")
+    .order("created_at", { ascending:false });
+
+  document.getElementById("feed").innerHTML = data.map(d=>{
+    const t=new Date(d.created_at);
+    const f=t.toLocaleString(undefined,{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"short",year:"numeric"});
+    return `<div class="entry"><div>${d.content}</div><time>${f}</time></div>`;
+  }).join("");
 }
 
 async function addEntry(){
   const text=document.getElementById("entry").value.trim();
   if(!text) return;
-
-  const {data:userData}=await client.auth.getUser();
+  const { data:userData } = await client.auth.getUser();
   await client.from("diary").insert({content:text,user_id:userData.user.id});
   document.getElementById("entry").value="";
   loadEntries();
+}
+
+async function logout(){
+  await client.auth.signOut();
+  location.reload();
 }
 
 client.auth.getSession().then(({data})=>{
