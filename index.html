@@ -5,60 +5,139 @@
 <title>Private Diary</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  background:#0b0d14;
+  color:white;
+}
+
+#app{
+  max-width:520px;
+  margin:auto;
+  padding:24px 18px 32px;
+}
+
+header{
+  font-size:28px;
+  font-weight:700;
+  letter-spacing:-0.02em;
+  margin-bottom:18px;
+}
+
+.editor{
+  background:rgba(255,255,255,0.04);
+  border-radius:20px;
+  padding:16px;
+  backdrop-filter:blur(14px);
+  border:1px solid rgba(255,255,255,0.08);
+}
+
+textarea{
+  width:100%;
+  background:transparent;
+  border:none;
+  resize:none;
+  outline:none;
+  color:white;
+  font-size:16px;
+  min-height:120px;
+  line-height:1.5;
+}
+
+.toolbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-top:12px;
+}
+
+.toolbar span{
+  font-size:13px;
+  color:#a0a5b5;
+}
+
+button{
+  padding:10px 18px;
+  border-radius:999px;
+  border:none;
+  background:linear-gradient(135deg,#8ba4ff,#6f85ff);
+  color:white;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.feed{
+  margin-top:26px;
+}
+
+.entry{
+  background:rgba(255,255,255,0.03);
+  border-radius:18px;
+  padding:14px 16px;
+  margin-top:12px;
+  border:1px solid rgba(255,255,255,0.07);
+}
+
+.entry time{
+  display:block;
+  margin-top:6px;
+  font-size:12px;
+  color:#a0a5b5;
+}
+
+#login{display:none}
+</style>
 </head>
 
 <body>
 
-<div id="login">
-  <input id="email" placeholder="Email">
-  <button onclick="sendLink()">Send link</button>
-</div>
+<div id="login"></div>
 
-<div id="app" style="display:none">
-  <textarea id="entry"></textarea>
-  <button onclick="addEntry()">Save</button>
-  <div id="feed"></div>
+<div id="app">
+  <header>My Diary</header>
+
+  <div class="editor">
+    <textarea id="entry" placeholder="Write something..."></textarea>
+    <div class="toolbar">
+      <span>Your thoughts stay private</span>
+      <button onclick="addEntry()">Save</button>
+    </div>
+  </div>
+
+  <div id="feed" class="feed"></div>
 </div>
 
 <script>
-const SUPABASE_URL = "https://fzgmpdybtnjzqikxfaco.supabase.co";
-const SUPABASE_KEY = "sb_publishable_-uOtGJkoTs43mx32klszYQ_pOAdTkEJ";
-
-const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-const login = document.getElementById("login");
-const app = document.getElementById("app");
-
-client.auth.getSession().then(({data})=>{
-  if(data.session) showApp();
-});
-
-client.auth.onAuthStateChange((_,session)=>{
-  if(session) showApp();
-});
-
-function showApp(){
-  login.style.display="none";
-  app.style.display="block";
-  loadEntries();
-}
-
-async function sendLink(){
-  const email=document.getElementById("email").value.trim();
-  await client.auth.signInWithOtp({ email });
-}
+const SUPABASE_URL="https://fzgmpdybtnjzqikxfaco.supabase.co";
+const SUPABASE_KEY="sb_publishable_-uOtGJkoTs43mx32klszYQ_pOAdTkEJ";
+const client=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 async function loadEntries(){
-  const {data}=await client.from("diary").select("*");
-  document.getElementById("feed").innerHTML = data.map(d=>`<div>${d.content}</div>`).join("");
+  const {data}=await client.from("diary").select("*").order("created_at",{ascending:false});
+  document.getElementById("feed").innerHTML=data.map(d=>`
+    <div class="entry">
+      <div>${d.content}</div>
+      <time>${new Date(d.created_at).toLocaleString()}</time>
+    </div>
+  `).join("");
 }
 
 async function addEntry(){
   const text=document.getElementById("entry").value.trim();
+  if(!text) return;
+
   const {data:userData}=await client.auth.getUser();
   await client.from("diary").insert({content:text,user_id:userData.user.id});
+  document.getElementById("entry").value="";
   loadEntries();
 }
+
+client.auth.getSession().then(({data})=>{
+  if(data.session) loadEntries();
+});
 </script>
 
 </body>
