@@ -7,110 +7,50 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-body{
-  margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
-  background:#0b0d14;
-  color:white;
-}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;background:#0b0d14;color:white}
+.screen{max-width:520px;margin:auto;padding:40px 20px;min-height:100vh}
+.hidden{display:none}
 
-#app{
-  max-width:520px;
-  margin:auto;
-  padding:24px 18px 32px;
-  position:relative;
-}
+h1{font-size:30px;font-weight:700;margin-bottom:8px}
+p{color:#a0a5b5;margin-bottom:24px}
 
-header{
-  font-size:28px;
-  font-weight:700;
-  letter-spacing:-0.02em;
-  margin-bottom:18px;
-}
+input{width:100%;padding:14px;border-radius:14px;border:none;background:rgba(255,255,255,0.04);color:white;font-size:16px}
 
-.logout{
-  position:absolute;
-  top:26px;
-  right:18px;
-  font-size:13px;
-  color:#a0a5b5;
-  cursor:pointer;
-}
+button{width:100%;padding:14px;border-radius:999px;border:none;background:linear-gradient(135deg,#8ba4ff,#6f85ff);color:white;font-weight:600;font-size:15px;margin-top:14px}
 
-.logout:hover{ color:white }
+#app header{display:flex;justify-content:space-between;align-items:center}
 
-.editor{
-  background:rgba(255,255,255,0.04);
-  border-radius:20px;
-  padding:16px;
-  backdrop-filter:blur(14px);
-  border:1px solid rgba(255,255,255,0.08);
-}
+.logout{font-size:13px;color:#a0a5b5;cursor:pointer}
+.logout:hover{color:white}
 
-textarea{
-  width:100%;
-  background:transparent;
-  border:none;
-  resize:none;
-  outline:none;
-  color:white;
-  font-size:16px;
-  min-height:120px;
-  line-height:1.5;
-}
+.editor{background:rgba(255,255,255,0.04);border-radius:20px;padding:16px;margin-top:20px;border:1px solid rgba(255,255,255,0.08)}
 
-.toolbar{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-top:12px;
-}
+textarea{width:100%;background:transparent;border:none;resize:none;outline:none;color:white;font-size:16px;min-height:120px}
 
-.toolbar span{
-  font-size:13px;
-  color:#a0a5b5;
-}
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+.toolbar span{font-size:13px;color:#a0a5b5}
 
-button{
-  padding:10px 18px;
-  border-radius:999px;
-  border:none;
-  background:linear-gradient(135deg,#8ba4ff,#6f85ff);
-  color:white;
-  font-weight:600;
-  cursor:pointer;
-}
+.feed{margin-top:26px}
 
-.feed{
-  margin-top:26px;
-}
-
-.entry{
-  background:rgba(255,255,255,0.03);
-  border-radius:18px;
-  padding:14px 16px;
-  margin-top:12px;
-  border:1px solid rgba(255,255,255,0.07);
-}
-
-.entry time{
-  display:block;
-  margin-top:6px;
-  font-size:12px;
-  color:#a0a5b5;
-}
-
-#login{display:none}
+.entry{background:rgba(255,255,255,0.03);border-radius:18px;padding:14px 16px;margin-top:12px;border:1px solid rgba(255,255,255,0.07)}
+.entry time{display:block;margin-top:6px;font-size:12px;color:#a0a5b5}
 </style>
 </head>
 
 <body>
 
-<div id="login"></div>
+<div id="login" class="screen">
+  <h1>Welcome</h1>
+  <p>Your private space. Only you can see what you write.</p>
+  <input id="email" type="email" placeholder="Email address">
+  <button onclick="sendLink()">Send magic link</button>
+</div>
 
-<div id="app">
-  <div class="logout" onclick="logout()">Log out</div>
-  <header>My Diary</header>
+<div id="app" class="screen hidden">
+  <header>
+    <h1>My Diary</h1>
+    <div class="logout" onclick="logout()">Log out</div>
+  </header>
 
   <div class="editor">
     <textarea id="entry" placeholder="Write something..."></textarea>
@@ -128,13 +68,39 @@ const SUPABASE_URL="https://fzgmpdybtnjzqikxfaco.supabase.co";
 const SUPABASE_KEY="sb_publishable_-uOtGJkoTs43mx32klszYQ_pOAdTkEJ";
 const client=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
-async function loadEntries(){
-  const { data } = await client
-    .from("diary")
-    .select("content, created_at")
-    .order("created_at", { ascending:false });
+const login=document.getElementById("login");
+const app=document.getElementById("app");
 
-  document.getElementById("feed").innerHTML = data.map(d=>{
+client.auth.getSession().then(({data})=>{
+  if(data.session) showApp();
+});
+
+client.auth.onAuthStateChange((_,session)=>{
+  if(session) showApp();
+  else showLogin();
+});
+
+function showApp(){
+  login.classList.add("hidden");
+  app.classList.remove("hidden");
+  loadEntries();
+}
+
+function showLogin(){
+  app.classList.add("hidden");
+  login.classList.remove("hidden");
+}
+
+async function sendLink(){
+  const email=document.getElementById("email").value.trim();
+  if(!email) return alert("Enter your email");
+  await client.auth.signInWithOtp({email});
+  alert("Check your email for the login link.");
+}
+
+async function loadEntries(){
+  const {data}=await client.from("diary").select("content,created_at").order("created_at",{ascending:false});
+  document.getElementById("feed").innerHTML=data.map(d=>{
     const t=new Date(d.created_at);
     const f=t.toLocaleString(undefined,{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"short",year:"numeric"});
     return `<div class="entry"><div>${d.content}</div><time>${f}</time></div>`;
@@ -144,7 +110,7 @@ async function loadEntries(){
 async function addEntry(){
   const text=document.getElementById("entry").value.trim();
   if(!text) return;
-  const { data:userData } = await client.auth.getUser();
+  const {data:userData}=await client.auth.getUser();
   await client.from("diary").insert({content:text,user_id:userData.user.id});
   document.getElementById("entry").value="";
   loadEntries();
@@ -152,12 +118,7 @@ async function addEntry(){
 
 async function logout(){
   await client.auth.signOut();
-  location.reload();
 }
-
-client.auth.getSession().then(({data})=>{
-  if(data.session) loadEntries();
-});
 </script>
 
 </body>
